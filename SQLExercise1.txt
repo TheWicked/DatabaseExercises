@@ -1,0 +1,57 @@
+====================================================================
+- Find the titles of all movies directed by Steven Spielberg.
+
+select title
+from Movie
+where director = "Steven Spielberg"
+
+====================================================================
+- Find all years that have a movie that received a rating of 4 or 5, and sort them in increasing order.
+
+select distinct year
+from Movie, Rating
+where Movie.mID = Rating.mID and stars >= 4
+order by year
+
+select year
+from Movie
+where mID in (select mID from Rating where stars >= 4)
+order by year
+
+select distinct year
+from Movie join Rating using(mID)
+where stars >= 4
+order by year
+
+====================================================================
+- Find the titles of all movies that have no ratings.
+
+select title
+from Movie
+where mID not in (select mID from Rating)
+
+====================================================================
+- Some reviewers didn't provide a date with their rating. Find the names of all reviewers who have ratings with a NULL value for the date.
+
+select name
+from Reviewer join Rating using(rID)
+where ratingDate is null
+
+select name
+from Reviewer
+where rID in (select rID from Rating where ratingDate isnull)
+
+====================================================================
+- Write a query to return the ratings data in a more readable format: reviewer name, movie title, stars, and ratingDate. Also, sort the data, first by reviewer name, then by movie title, and lastly by number of stars. 
+
+select name, title, stars, ratingDate
+from (Reviewer join Rating using(rID)) join Movie using(mID)
+order by name, title, stars
+
+join is associative so we do not need the parenthesis
+
+====================================================================
+- For all cases where the same reviewer rated the same movie twice and gave it a higher rating the second time, return the reviewer's name and the title of the movie. 
+
+select (select name from Reviewer where rID = TWICE.rID) as name, (select title from Movie where mID = TWICE.mID) as title
+from (select R1.rID, R1.mID from Rating R1, Rating R2 where R1.mID = R2.mID and R1.rID = R2.rID and R1.ratingDate < R2.ratingDate and R1.stars < R2.stars) TWICE
