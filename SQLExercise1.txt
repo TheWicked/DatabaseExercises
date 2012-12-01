@@ -53,5 +53,60 @@ join is associative so we do not need the parenthesis
 ====================================================================
 - For all cases where the same reviewer rated the same movie twice and gave it a higher rating the second time, return the reviewer's name and the title of the movie. 
 
-select (select name from Reviewer where rID = TWICE.rID) as name, (select title from Movie where mID = TWICE.mID) as title
-from (select R1.rID, R1.mID from Rating R1, Rating R2 where R1.mID = R2.mID and R1.rID = R2.rID and R1.ratingDate < R2.ratingDate and R1.stars < R2.stars) TWICE
+select	(select name from Reviewer where rID = TWICE.rID) as name,
+		(select title from Movie where mID = TWICE.mID) as title
+from (	select R1.rID, R1.mID
+		from Rating R1, Rating R2
+		where R1.mID = R2.mID and R1.rID = R2.rID and R1.ratingDate < R2.ratingDate and R1.stars < R2.stars
+	) TWICE
+
+select name, title
+from ( (select *
+		from Rating R1
+		where mID in (select mID from Rating R2 where R1.mID = R2.mID and R1.rID = R2.rID and R1.ratingDate < R2.ratingDate and R1.stars < R2.stars)
+		) TwiceRating
+        join Reviewer using(rID) join Movie using(mID)
+	) TWICE
+
+====================================================================
+- For each movie that has at least one rating, find the highest number of stars that movie received. Return the movie title and number of stars.
+Sort by movie title.
+
+select distinct title, stars
+from (select *
+		from Rating R1
+		where not exists (select * from Rating R2 where R1.mID = R2.mID and R1.stars < R2.stars) ) HighestRating join Movie using(mID)
+order by title
+
+====================================================================
+- For each movie, return the title and the 'rating spread', that is, the difference between highest and lowest ratings given to that movie.
+Sort by rating spread from highest to lowest, then by movie title.
+
+select distinct title, spread
+from ( (select R1.mID, abs(R1.stars - R2.stars) as spread
+           from Rating R1, Rating R2
+           where R1.mID = R2.mID and R1.stars <> R2.stars) join Movie using(mID) ) S1
+where not exists (select *
+                          from ( (select R1.mID, abs(R1.stars - R2.stars) as spread
+                                     from Rating R1, Rating R2
+                                     where R1.mID = R2.mID and R1.stars <> R2.stars) join Movie using(mID) ) S2
+                           where S1.mID = S2.mID and S1.spread < S2.spread)
+order by spread desc, title
+
+====================================================================
+- Find the difference between the average rating of movies released before 1980 and the average rating of movies released after 1980.
+(Make sure to calculate the average rating for each movie, then the average of those averages for movies before 1980 and movies after. Don't just calculate the overall average rating before and after 1980.)
+
+select (select avg(avgStars)
+			from (select mID, year, avg(stars) as avgStars, 'Before80' as before80
+					from Rating join Movie using(mID)
+					group by mID
+					having year < 1980)
+			group by before80) as avgBef80
+		-
+		(select avg(avgStars)
+			from (select mID, year, avg(stars) as avgStars, 'After80' as after80
+					from Rating join Movie using(mID)
+					group by mID
+					having year >= 1980)
+			group by after80) as avgAft80
